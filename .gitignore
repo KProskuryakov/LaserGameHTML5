@@ -1,0 +1,8 @@
+dist/
+node_modules/
+/.babelrc
+/package.json
+/test.html
+/test1.js
+/test2.js
+/.idea
