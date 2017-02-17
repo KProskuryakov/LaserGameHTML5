@@ -1,14 +1,4 @@
 "use strict";
-const canvas = document.getElementById("laser-game-canvas");
-const ctx = canvas.getContext("2d");
-
-const tileSize = 50;
-const windowWidth = canvas.width;
-const windowHeight = canvas.height;
-const pieces = new Map();
-
-const imgLaserGrid = new Image();
-
 class Piece {
     constructor (src) {
         this.tile = new Tile(-1, -1);
@@ -20,11 +10,15 @@ class Piece {
     setLocation (tile) {
         this.tile = tile;
     }
-    draw () {
+    draw() {
         if (this.tile.isValid()) {
             let pos = this.tile.toPixels();
             ctx.drawImage(this.img, pos.x, pos.y);
         }
+    }
+    drawAt(tile) {
+        let pos = tile.toPixels();
+        ctx.drawImage(this.img, pos.x, pos.y);
     }
 }
 
@@ -68,21 +62,81 @@ class Tile {
     toPixels() {
         return {x: this.tileX * tileSize, y: this.tileY * tileSize};
     }
+    getOffsetTile(tileX = 0, tileY = 0) {
+        return new Tile(this.tileX + tileX, this.tileY + tileY);
+    }
+    equals(tile) {
+        return (this.tileX === tile.tileX && this.tileY === tile.tileY);
+    }
+    minus(tile) {
+        return new Tile(this.tileX - tile.tileX, this.tileY - tile.tileY);
+    }
 }
+
+class Toolbar {
+    constructor(src, tile) {
+        this.img = new Image(); this.img.src = src;
+        this.tile = tile;
+        this.selectedPiece = 0;
+    }
+    draw() {
+        let loc = this.tile.toPixels();
+        ctx.drawImage(this.img, loc.x, loc.y);
+        pieces.get("forwardSlash").drawAt(this.tile);
+        pieces.get("backSlash").drawAt(this.tile.getOffsetTile(1, 0));
+        pieces.get("blackHole").drawAt(this.tile.getOffsetTile(2, 0));
+        pieces.get("sideSplit").drawAt(this.tile.getOffsetTile(3, 0));
+        pieces.get("upSplit").drawAt(this.tile.getOffsetTile(4, 0));
+        pieces.get("blue").drawAt(this.tile.getOffsetTile(5, 0));
+        pieces.get("red").drawAt(this.tile.getOffsetTile(6, 0));
+        pieces.get("green").drawAt(this.tile.getOffsetTile(7, 0));
+        ctx.fillStyle = "green";
+        ctx .globalAlpha = 0.2;
+        loc = new Tile(this.tile.getOffsetTile(this.selectedPiece, 0).tileX, this.tile.tileY).toPixels();
+        ctx.fillRect(loc.x, loc.y, tileSize, tileSize);
+        console.log(loc.x);
+        ctx.globalAlpha = 1;
+    }
+    processMouseInput(tile) {
+        let tileLoc = tile.minus(this.tile);
+        if (tileLoc.tileY === 0) {
+            if (tileLoc.tileX > -1 && tileLoc.tileX < numToPiece.length) {
+                let tempPiece = this.selectedPiece;
+                this.selectedPiece = tileLoc.tileX;
+                if (tempPiece != this.selectedPiece) {
+                    draw();
+                }
+            }
+        }
+    }
+}
+
+
+const canvas = document.getElementById("laser-game-canvas");
+const ctx = canvas.getContext("2d");
+
+const tileSize = 50;
+const windowWidth = canvas.width;
+const windowHeight = canvas.height;
+const pieces = new Map();
+
+const imgLaserGrid = new Image();
+const toolbar = new Toolbar("toolbar.png", new Tile(1, 8));
+const numToPiece = ["forwardSlash", "backSlash", "blackHole", "sideSplit", "upSplit", "blue", "red", "green"];
 
 function init() {
     canvas.addEventListener("mousemove", onMouseMove, false);
     canvas.addEventListener("click", onClick, false);
 
-    pieces.add("forwardSlash", new Mirror("pieces/mirror_forwardslash.png", "east", "north", "west", "south"));
-    pieces.add("backSlash", new Mirror("pieces/mirror_backslash.png", "west", "south", "east", "north"));
-    pieces.add("blackHole", new Mirror("pieces/mirror_blackhole.png", "none", "none", "none", "none"));
-    pieces.add("sideSplit", new Mirror("pieces/mirror_sidesplit.png", "east", "none", "east", "splitns"));
-    pieces.add("upSplit", new Mirror("pieces/mirror_upsplit.png", "none", "north", "splitew", "north"));
+    pieces.set("forwardSlash", new Mirror("pieces/mirror_forwardslash.png", "east", "north", "west", "south"));
+    pieces.set("backSlash", new Mirror("pieces/mirror_backslash.png", "west", "south", "east", "north"));
+    pieces.set("blackHole", new Mirror("pieces/mirror_blackhole.png", "none", "none", "none", "none"));
+    pieces.set("sideSplit", new Mirror("pieces/mirror_sidesplit.png", "east", "none", "east", "splitns"));
+    pieces.set("upSplit", new Mirror("pieces/mirror_upsplit.png", "none", "north", "splitew", "north"));
 
-    pieces.add("blue", new Swatch("pieces/swatch_blue.png", 0, 0, 255));
-    pieces.add("red", new Swatch("pieces/swatch_red.png", 255, 0, 0));
-    pieces.add("green", new Swatch("pieces/swatch_green.png", 0, 255, 0));
+    pieces.set("blue", new Swatch("pieces/swatch_blue.png", 0, 0, 255));
+    pieces.set("red", new Swatch("pieces/swatch_red.png", 255, 0, 0));
+    pieces.set("green", new Swatch("pieces/swatch_green.png", 0, 255, 0));
 
 
     imgLaserGrid.onload = () => {draw()};
@@ -103,12 +157,14 @@ function init() {
 
 function draw() {
     // empty screen
+    ctx.clearRect(0, 0, windowWidth, windowHeight);
     ctx.fillStyle = '#bcbcbc';
     ctx.fillRect(0, 0, windowWidth, windowHeight);
 
     ctx.drawImage(imgLaserGrid, 0, 0);
+    toolbar.draw();
 
-    pieces.forEach((val) => {val.draw()});
+    pieces.forEach((piece) => {piece.draw()});
     // // grid setup
     // ctx.strokeStyle = "#000";
     // for (let i = 0; i <= 5; i++) {
@@ -137,8 +193,8 @@ function onMouseMove(event) {
 
 function onClick(event) {
     //console.log("Clicked here: x" + event.clientX + ", y: " + event.clientY);
-    let tile = pixelToTile(event.clientX, event.clientY, tileSize);
-
+    let tile = Tile.TileFromPixels(event.clientX, event.clientY);
+    toolbar.processMouseInput(tile);
 }
 
 // function drawHorizontalLine(ctx, yOffset, x1, x2) {
