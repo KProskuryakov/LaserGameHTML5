@@ -422,7 +422,7 @@ const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
  */
 const pieces = new Map();
 /**
- * @type {string[]}
+ * @type {Symbol[]}
  */
 const numToPiece = [PIECE_FORWARDSLASH, PIECE_BACKSLASH, PIECE_BLACKHOLE, PIECE_SIDESPLIT, PIECE_UPSPLIT, PIECE_BLUE, PIECE_RED, PIECE_GREEN];
 /**
