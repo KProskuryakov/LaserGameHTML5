@@ -1,11 +1,11 @@
 // window.requestAnimationFrame(() => {update(0, 0, ctx, canvas.width, canvas.height, tileSize)});
 
 // this update function would be useful in the case of a constantly updating frame
-// function update (curTime, oldTime, ctx, windowWidth, windowHeight, tileSize) {
+// function update (curTime, oldTime, ctx, windowWidth, windowHeight, TILESIZE) {
 //     const dt = (curTime - oldTime) / 1000;
 //     //console.log(dt);
-//     draw(ctx, windowWidth, windowHeight, tileSize, dt);
-//     window.requestAnimationFrame((newTime) => {update(newTime, curTime, ctx, windowWidth, windowHeight, tileSize)});
+//     draw(ctx, windowWidth, windowHeight, TILESIZE, dt);
+//     window.requestAnimationFrame((newTime) => {update(newTime, curTime, ctx, windowWidth, windowHeight, TILESIZE)});
 // }
 
 
@@ -13,20 +13,20 @@
 // // grid setup
 // ctx.strokeStyle = "#000";
 // for (let i = 0; i <= 5; i++) {
-//     traceHorizontalLine(ctx, tileSize + tileSize * i, tileSize, tileSize * 6);
-//     traceVerticalLine(ctx, tileSize + tileSize * i, tileSize, tileSize * 6);
+//     traceHorizontalLine(ctx, TILESIZE + TILESIZE * i, TILESIZE, TILESIZE * 6);
+//     traceVerticalLine(ctx, TILESIZE + TILESIZE * i, TILESIZE, TILESIZE * 6);
 // }
 //
 // // draw toolbar boxes
-// traceHorizontalLine(ctx, windowHeight - tileSize * 3, tileSize, tileSize * 9);
-// traceHorizontalLine(ctx, windowHeight - tileSize * 2, tileSize, tileSize * 9);
+// traceHorizontalLine(ctx, windowHeight - TILESIZE * 3, TILESIZE, TILESIZE * 9);
+// traceHorizontalLine(ctx, windowHeight - TILESIZE * 2, TILESIZE, TILESIZE * 9);
 // for (let i = 0; i <= 8; i++) {
-//     traceVerticalLine(ctx, tileSize + i * tileSize, windowHeight - tileSize * 3, windowHeight - tileSize * 2);
+//     traceVerticalLine(ctx, TILESIZE + i * TILESIZE, windowHeight - TILESIZE * 3, windowHeight - TILESIZE * 2);
 // }
 // ctx.stroke();
 
 // draw edge numbers
-// drawEdgeNumbers(ctx, tileSize, "24px Ariel", "#000000");
+// drawEdgeNumbers(ctx, TILESIZE, "24px Ariel", "#000000");
 
 // if ever needed
 //drawFPS(ctx, "24px Ariel", "#000000", fps);
@@ -59,14 +59,14 @@
 //     ctx.stroke();
 // }
 //
-// function drawEdgeNumbers(ctx, tileSize, fontString, textColor) {
-//     let halfTile = tileSize / 2;
+// function drawEdgeNumbers(ctx, TILESIZE, fontString, textColor) {
+//     let halfTile = TILESIZE / 2;
 //     ctx.font = fontString;
 //     ctx.fillStyle = textColor;
 //     ctx.textAlign = "center";
 //     for (let edge = 1; edge <= 20; edge++) {
 //         let tile = edgeNumberToTile(edge);
-//         ctx.fillText(`${edge}`, tile.x * tileSize + halfTile, tile.y * tileSize + halfTile + 12);
+//         ctx.fillText(`${edge}`, tile.x * TILESIZE + halfTile, tile.y * TILESIZE + halfTile + 12);
 //     }
 // }
 

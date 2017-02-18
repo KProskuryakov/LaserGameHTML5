@@ -26,14 +26,14 @@ class Mirror extends Piece {
     /**
      * Creates a mirror out of this stuff
      * @param {string} src
-     * @param {string} north
-     * @param {string} east
-     * @param {string} south
-     * @param {string} west
+     * @param {Symbol} north
+     * @param {Symbol} east
+     * @param {Symbol} south
+     * @param {Symbol} west
      */
     constructor (src, north, east, south, west) {
         super(src);
-        this.north = north; this.south = south; this.east = east; this.west = west;
+        this[DIRECTION_NORTH] = north; this[DIRECTION_SOUTH] = south; this[DIRECTION_EAST] = east; this[DIRECTION_WEST] = west;
     }
     // TODO: figure out whether I need to process the laser here or not
     processLaser(laser) {
@@ -82,13 +82,13 @@ class Laser {
  */
 class Tile {
     /**
-     *  Constructs a tile based on pixel location and the global tileSize
+     *  Constructs a tile based on pixel location and the global TILESIZE
      * @param {number} x
      * @param {number} y
      * @returns {Tile}
      */
     static TileFromPixels(x, y) {
-        return new Tile(Math.floor(x / tileSize), Math.floor(y / tileSize));
+        return new Tile(Math.floor(x / TILESIZE), Math.floor(y / TILESIZE));
     }
 
     /**
@@ -115,7 +115,7 @@ class Tile {
      * @returns {{x: number, y: number}}
      */
     toPixels() {
-        return {x: this.tileX * tileSize, y: this.tileY * tileSize};
+        return {x: this.tileX * TILESIZE, y: this.tileY * TILESIZE};
     }
 
     /**
@@ -136,6 +136,7 @@ class Tile {
     minus(tile) {
         return new Tile(this.tileX - tile.tileX, this.tileY - tile.tileY);
     }
+
     /**
      * Adds a tile to this one, returns a new tile.
      * @param {Tile} tile
@@ -143,6 +144,21 @@ class Tile {
      */
     add(tile) {
         return new Tile(this.tileX + tile.tileX, this.tileY + tile.tileY);
+    }
+
+    /**
+     * @returns {Tile}
+     */
+    copy() {
+        return new Tile(this.tileX, this.tileY);
+    }
+
+    /**
+     * returns the next tile in a given direction
+     * @param {Symbol} dir
+     */
+    nextTile(dir) {
+        return this.add(directionMapping[dir]);
     }
 }
 
@@ -195,6 +211,9 @@ class CanvasComponent {
     }
 }
 
+/**
+ * The toolbar to select the pieces to put in the grid
+ */
 class Toolbar extends CanvasComponent {
     /**
      *
@@ -225,7 +244,7 @@ class Toolbar extends CanvasComponent {
         ctx.fillStyle = "green";
         ctx .globalAlpha = 0.2;
         let loc = new Tile(this.tile.add(new Tile(this.selectedPiece, 0)).tileX, this.tile.tileY).toPixels();
-        ctx.fillRect(loc.x, loc.y, tileSize, tileSize);
+        ctx.fillRect(loc.x, loc.y, TILESIZE, TILESIZE);
         ctx.globalAlpha = 1;
     }
 
@@ -349,7 +368,9 @@ class LaserGrid extends CanvasComponent {
      * @param {Laser} laser
      */
     calculatePath(edge, laser) {
+        for (let i = 0; i < 100; i++) {
 
+        }
     }
 
     /**
@@ -374,31 +395,64 @@ class LaserGrid extends CanvasComponent {
 const canvas = document.getElementById("laser-game-canvas");
 const ctx = canvas.getContext("2d");
 
-const tileSize = 50;
+const TILESIZE = 50;
 
 const toolbar = new Toolbar("toolbar.png", new Tile(1, 8), 8, 1);
 const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
 
+/**
+ * @type {Map.<Symbol, Piece>}
+ */
 const pieces = new Map();
-const numToPiece = ["forwardSlash", "backSlash", "blackHole", "sideSplit", "upSplit", "blue", "red", "green"];
+/**
+ * @type {string[]}
+ */
+const numToPiece = [PIECE_FORWARDSLASH, PIECE_BACKSLASH, PIECE_BLACKHOLE, PIECE_SIDESPLIT, PIECE_UPSPLIT, PIECE_BLUE, PIECE_RED, PIECE_GREEN];
 
+const DIRECTION_NORTH = Symbol('North');
+const DIRECTION_SOUTH = Symbol('South');
+const DIRECTION_EAST = Symbol('East');
+const DIRECTION_WEST = Symbol('West');
+const DIRECTION_NONE = Symbol('None');
+const DIRECTION_SPLIT_EAST_WEST = Symbol('Split East-West');
+const DIRECTION_SPLIT_NORTH_SOUTH = Symbol('Split North-South');
+
+/**
+ * @type {Object.<Symbol, Tile>}
+ */
+const directionMapping = {[DIRECTION_NORTH]: new Tile(0, -1), [DIRECTION_SOUTH]: new Tile(0, 1), [DIRECTION_EAST]: new Tile(1, 0), [DIRECTION_WEST]: new Tile(-1, 0)};
+
+const PIECE_FORWARDSLASH = Symbol('forwardSlash');
+const PIECE_BACKSLASH = Symbol('forwardSlash');
+const PIECE_BLACKHOLE = Symbol('forwardSlash');
+const PIECE_SIDESPLIT = Symbol('forwardSlash');
+const PIECE_UPSPLIT = Symbol('forwardSlash');
+const PIECE_BLUE = Symbol('forwardSlash');
+const PIECE_RED = Symbol('forwardSlash');
+const PIECE_GREEN = Symbol('forwardSlash');
+
+/**
+ * Inits the things that aren't constants
+ */
 function init() {
     canvas.addEventListener("mousemove", onMouseMove, false);
     canvas.addEventListener("click", onClick, false);
 
-    pieces.set("forwardSlash", new Mirror("pieces/mirror_forwardslash.png", "east", "north", "west", "south"));
-    pieces.set("backSlash", new Mirror("pieces/mirror_backslash.png", "west", "south", "east", "north"));
-    pieces.set("blackHole", new Mirror("pieces/mirror_blackhole.png", "none", "none", "none", "none"));
-    pieces.set("sideSplit", new Mirror("pieces/mirror_sidesplit.png", "east", "none", "east", "splitns"));
-    pieces.set("upSplit", new Mirror("pieces/mirror_upsplit.png", "none", "north", "splitew", "north"));
+    pieces.set(PIECE_FORWARDSLASH, new Mirror("pieces/mirror_forwardslash.png", DIRECTION_EAST, DIRECTION_NORTH, DIRECTION_WEST, DIRECTION_SOUTH));
+    pieces.set(PIECE_BACKSLASH, new Mirror("pieces/mirror_backslash.png", DIRECTION_WEST, DIRECTION_SOUTH, DIRECTION_EAST, DIRECTION_NORTH));
+    pieces.set(PIECE_BLACKHOLE, new Mirror("pieces/mirror_blackhole.png", DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE));
+    pieces.set(PIECE_SIDESPLIT, new Mirror("pieces/mirror_sidesplit.png", DIRECTION_EAST, DIRECTION_NONE, DIRECTION_EAST, DIRECTION_SPLIT_NORTH_SOUTH));
+    pieces.set(PIECE_UPSPLIT, new Mirror("pieces/mirror_upsplit.png", DIRECTION_NONE, DIRECTION_NORTH, DIRECTION_SPLIT_EAST_WEST, DIRECTION_NORTH));
 
-    pieces.set("blue", new Swatch("pieces/swatch_blue.png", 0, 0, 255));
-    pieces.set("red", new Swatch("pieces/swatch_red.png", 255, 0, 0));
-    pieces.set("green", new Swatch("pieces/swatch_green.png", 0, 255, 0));
+    pieces.set(PIECE_BLUE, new Swatch("pieces/swatch_blue.png", 0, 0, 255));
+    pieces.set(PIECE_RED, new Swatch("pieces/swatch_red.png", 255, 0, 0));
+    pieces.set(PIECE_GREEN, new Swatch("pieces/swatch_green.png", 0, 255, 0));
 }
 
+/**
+ * Draws all the things
+ */
 function draw() {
-    // empty screen
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#bcbcbc';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
