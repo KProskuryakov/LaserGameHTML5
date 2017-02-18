@@ -1,4 +1,21 @@
 "use strict";
+const DIRECTION_NORTH = Symbol('North');
+const DIRECTION_SOUTH = Symbol('South');
+const DIRECTION_EAST = Symbol('East');
+const DIRECTION_WEST = Symbol('West');
+const DIRECTION_NONE = Symbol('None');
+const DIRECTION_SPLIT_EAST_WEST = Symbol('Split East-West');
+const DIRECTION_SPLIT_NORTH_SOUTH = Symbol('Split North-South');
+
+const PIECE_FORWARDSLASH = Symbol('forwardSlash');
+const PIECE_BACKSLASH = Symbol('forwardSlash');
+const PIECE_BLACKHOLE = Symbol('forwardSlash');
+const PIECE_SIDESPLIT = Symbol('forwardSlash');
+const PIECE_UPSPLIT = Symbol('forwardSlash');
+const PIECE_BLUE = Symbol('forwardSlash');
+const PIECE_RED = Symbol('forwardSlash');
+const PIECE_GREEN = Symbol('forwardSlash');
+
 class Piece {
     /**
      * Constructs a single piece with the given image src
@@ -319,12 +336,12 @@ class LaserGrid extends CanvasComponent {
         let relativeTile = super.processMouseClick(x, y);
         if (relativeTile != null) {
             if (relativeTile.compare(new Tile(1, 1), (v1, v2) => v1 >= v2) && relativeTile.compare(new Tile(5, 5), (v1, v2) => v1 <= v2)) {
-                let loc = {x: relativeTile.tileX - 1, y: relativeTile.tileY - 1};
-                let piece = this.grid[loc.y][loc.x];
+                let loc = relativeTile.minus(new Tile(1, 1));
+                let piece = this.grid[loc.tileY][loc.tileX];
                 if (piece != null) {
                     this.removePiece(piece);
                 } else {
-                    this.addPiece(toolbar.getSelectedPiece(), loc.x, loc.y);
+                    this.addPiece(toolbar.getSelectedPiece(), loc);
                 }
             }
         }
@@ -408,28 +425,11 @@ const pieces = new Map();
  * @type {string[]}
  */
 const numToPiece = [PIECE_FORWARDSLASH, PIECE_BACKSLASH, PIECE_BLACKHOLE, PIECE_SIDESPLIT, PIECE_UPSPLIT, PIECE_BLUE, PIECE_RED, PIECE_GREEN];
-
-const DIRECTION_NORTH = Symbol('North');
-const DIRECTION_SOUTH = Symbol('South');
-const DIRECTION_EAST = Symbol('East');
-const DIRECTION_WEST = Symbol('West');
-const DIRECTION_NONE = Symbol('None');
-const DIRECTION_SPLIT_EAST_WEST = Symbol('Split East-West');
-const DIRECTION_SPLIT_NORTH_SOUTH = Symbol('Split North-South');
-
 /**
  * @type {Object.<Symbol, Tile>}
  */
 const directionMapping = {[DIRECTION_NORTH]: new Tile(0, -1), [DIRECTION_SOUTH]: new Tile(0, 1), [DIRECTION_EAST]: new Tile(1, 0), [DIRECTION_WEST]: new Tile(-1, 0)};
 
-const PIECE_FORWARDSLASH = Symbol('forwardSlash');
-const PIECE_BACKSLASH = Symbol('forwardSlash');
-const PIECE_BLACKHOLE = Symbol('forwardSlash');
-const PIECE_SIDESPLIT = Symbol('forwardSlash');
-const PIECE_UPSPLIT = Symbol('forwardSlash');
-const PIECE_BLUE = Symbol('forwardSlash');
-const PIECE_RED = Symbol('forwardSlash');
-const PIECE_GREEN = Symbol('forwardSlash');
 
 /**
  * Inits the things that aren't constants
