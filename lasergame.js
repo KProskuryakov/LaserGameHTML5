@@ -16,6 +16,9 @@ const PIECE_BLUE = Symbol('forwardSlash');
 const PIECE_RED = Symbol('forwardSlash');
 const PIECE_GREEN = Symbol('forwardSlash');
 
+const END_BLOCKED = Symbol('blocked');
+const END_LOOP = Symbol('loop');
+
 class Piece {
     /**
      * Constructs a single piece with the given image src
@@ -52,10 +55,6 @@ class Mirror extends Piece {
         super(src);
         this[DIRECTION_NORTH] = north; this[DIRECTION_SOUTH] = south; this[DIRECTION_EAST] = east; this[DIRECTION_WEST] = west;
     }
-    // TODO: figure out whether I need to process the laser here or not
-    processLaser(laser) {
-        return new Laser(this.tile, this[laser.dir], laser.r, laser.g, laser.b);
-    }
 }
 
 /**
@@ -65,13 +64,64 @@ class Swatch extends Piece {
     /**
      *
      * @param {string} src
-     * @param {number} r
-     * @param {number} g
-     * @param {number} b
+     * @param {Color} color
      */
-    constructor (src, r, g, b) {
+    constructor (src, color) {
         super(src);
+        this.color = color;
+    }
+}
+
+/**
+ * Represents colors in rgb and can be converted to a string or hex
+ */
+class Color {
+    /**
+     * Makes a color object
+     * @param {number} r between 0 and 255
+     * @param {number} g between 0 and 255
+     * @param {number} b between 0 and 255
+     */
+    constructor(r = 0, g = 0, b = 0) {
         this.r = r; this.g = g; this.b = b;
+    }
+
+    /**
+     * adds a color to this one and returns the result
+     * @param {Color} color
+     * @returns {Color}
+     */
+    add(color) {
+        return new Color(Math.min(this.r + color.r, 255), Math.min(this.g + color.g, 255), Math.min(this.b + color.b, 255));
+    }
+
+    toRGBString() {
+        return "rgb(" + this.r + "," + this.g + "," + this.b + ")";
+    }
+
+    toName() {
+        if (this.r === 0) {
+            if (this.g === 0) {
+                if (this.b === 0) {
+                    return "black";
+                }
+                return "blue";
+            }
+            if (this.b === 0) {
+                return "green";
+            }
+            return "cyan";
+        }
+        if (this.g === 0) {
+            if (this.b === 0) {
+                return "red";
+            }
+            return "magenta";
+        }
+        if (this.b === 0) {
+            return "yellow";
+        }
+        return "white";
     }
 }
 
@@ -79,18 +129,12 @@ class Laser {
     /**
      * Constructs a Laser
      * @param {Tile} tile
-     * @param {string} dir
-     * @param {number} r
-     * @param {number} g
-     * @param {number} b
+     * @param {Symbol} dir
+     * @param {Color} color
      */
-    constructor (tile, dir, r = 0, g = 0, b = 0) {
+    constructor (tile, dir, color = new Color()) {
         this.tile = tile; this.dir = dir;
-        this.r = r; this.g = g; this.b = b;
-    }
-    // TODO: Finish the laser class I guess
-    draw () {
-
+        this.color = color;
     }
 }
 
@@ -118,7 +162,7 @@ class Tile {
     }
 
     /**
-     *
+     * checks to see if the tile is greater than -1, and less than maxX/maxY
      * @param {number} maxX
      * @param {number} maxY
      * @returns {boolean}
@@ -173,6 +217,7 @@ class Tile {
     /**
      * returns the next tile in a given direction
      * @param {Symbol} dir
+     * @return {Tile}
      */
     nextTile(dir) {
         return this.add(directionMapping[dir]);
@@ -341,8 +386,9 @@ class LaserGrid extends CanvasComponent {
                 if (piece != null) {
                     this.removePiece(piece);
                 } else {
-                    this.addPiece(toolbar.getSelectedPiece(), loc);
+                    this.setPiece(toolbar.getSelectedPiece(), loc);
                 }
+                this.calculateAllPaths();
             }
         }
     }
@@ -363,10 +409,18 @@ class LaserGrid extends CanvasComponent {
      * @param piece the selected piece
      * @param {Tile} tile the tile on the grid to put the piece in
      */
-    addPiece(piece, tile) {
+    setPiece(piece, tile) {
         this.removePiece(piece);
         this.grid[tile.tileY][tile.tileX] = piece;
         piece.tile = tile;
+    }
+
+    /**
+     * @param {Tile} tile
+     * @return {?Piece}
+     */
+    getPiece(tile) {
+        return this.grid[tile.tileY][tile.tileX];
     }
 
     /**
@@ -377,6 +431,7 @@ class LaserGrid extends CanvasComponent {
         for (let edge = 1; edge <= 20; edge++) {
             this.calculatePath(edge, LaserGrid.edgeNumberToLaser(edge));
         }
+        this.logPaths();
     }
 
     /**
@@ -386,8 +441,57 @@ class LaserGrid extends CanvasComponent {
      */
     calculatePath(edge, laser) {
         for (let i = 0; i < 100; i++) {
+            laser.tile = laser.tile.nextTile(laser.dir);
+            if (!laser.tile.isValid(5, 5)) {
+                let endEdge = LaserGrid.tileToEdgeNumber(laser.tile);
+                this.addEndingToPaths(edge, new Ending(endEdge, laser.color));
+                return;
+            }
+            let piece = this.getPiece(laser.tile);
+            if (piece) {
+                if (piece instanceof Mirror) {
+                    laser.dir = piece[laser.dir];
+                    switch (laser.dir) {
+                        case DIRECTION_SPLIT_NORTH_SOUTH:
+                            laser.dir = DIRECTION_NORTH;
+                            this.calculatePath(edge, new Laser(laser.tile, DIRECTION_SOUTH, laser.color));
+                            break;
+                        case DIRECTION_SPLIT_EAST_WEST:
+                            laser.dir = DIRECTION_EAST;
+                            this.calculatePath(edge, new Laser(laser.tile, DIRECTION_WEST, laser.color));
+                            break;
+                        case DIRECTION_NONE:
+                            this.addEndingToPaths(edge, new Ending(END_BLOCKED, laser.color));
+                            return;
+                    }
+                } else if (piece instanceof Swatch) {
+                    laser.color = laser.color.add(piece.color);
+                }
+            } // if piece is not null
+        } // for
+        this.addEndingToPaths(edge, new Ending(END_LOOP, laser.color));
+    }
 
+    logPaths() {
+        for (let i = 1; i <= 20; i++) {
+            // if (path.length > 1) {
+            //     console.log()
+            // }
+            let path = this.paths[i];
+            let ending = path[0];
+            console.log(i + " -> " + ending.end + " " + ending.color.toName());
         }
+    }
+
+    /**
+     * @param {number} edge
+     * @param {Ending} ending
+     */
+    addEndingToPaths(edge, ending) {
+        if (!this.paths[edge]) {
+            this.paths[edge] = []
+        }
+        this.paths[edge].push(ending);
     }
 
     /**
@@ -397,14 +501,45 @@ class LaserGrid extends CanvasComponent {
      */
     static edgeNumberToLaser(edge) {
         if (edge < 6) {
-            return new Laser(new Tile(edge, 0), "south");
+            return new Laser(new Tile(edge - 1, -1), DIRECTION_SOUTH);
         } else if (edge < 11) {
-            return new Laser(new Tile(6, edge - 5), "west");
+            return new Laser(new Tile(5, edge - 6), DIRECTION_WEST);
         } else if (edge < 16) {
-            return new Laser(new Tile(-edge + 16, 6), "north");
+            return new Laser(new Tile(-edge + 15, 5), DIRECTION_NORTH);
         } else if (edge < 21) {
-            return new Laser(new Tile(0, -edge + 21), "east");
+            return new Laser(new Tile(-1, -edge + 20), DIRECTION_EAST);
         }
+    }
+
+    /**
+     *
+     * @param {Tile} tile
+     * @returns {number}
+     */
+    static tileToEdgeNumber(tile) {
+        let x = tile.tileX; let y = tile.tileY;
+        if (y === -1 && x > -1 && x < 5) {
+            return 1+ x;
+        } else if (x === 5 && y > -1 && y < 5) {
+            return 6 + y;
+        } else if (y === 5 && x > -1 && x < 5) {
+            return 15 - x;
+        } else if (x === -1 && y > -1 && y < 5) {
+            return 20 - y;
+        }
+        return 0;
+    }
+
+}
+
+class Ending {
+    /**
+     *
+     * @param {number|Symbol} end
+     * @param {Color} color
+     */
+    constructor(end, color) {
+        this.end = end; this.color = color;
     }
 }
 
@@ -425,11 +560,11 @@ const pieces = new Map();
  * @type {Symbol[]}
  */
 const numToPiece = [PIECE_FORWARDSLASH, PIECE_BACKSLASH, PIECE_BLACKHOLE, PIECE_SIDESPLIT, PIECE_UPSPLIT, PIECE_BLUE, PIECE_RED, PIECE_GREEN];
+
 /**
  * @type {Object.<Symbol, Tile>}
  */
-const directionMapping = {[DIRECTION_NORTH]: new Tile(0, -1), [DIRECTION_SOUTH]: new Tile(0, 1), [DIRECTION_EAST]: new Tile(1, 0), [DIRECTION_WEST]: new Tile(-1, 0)};
-
+let directionMapping;
 
 /**
  * Inits the things that aren't constants
@@ -444,9 +579,13 @@ function init() {
     pieces.set(PIECE_SIDESPLIT, new Mirror("pieces/mirror_sidesplit.png", DIRECTION_EAST, DIRECTION_NONE, DIRECTION_EAST, DIRECTION_SPLIT_NORTH_SOUTH));
     pieces.set(PIECE_UPSPLIT, new Mirror("pieces/mirror_upsplit.png", DIRECTION_NONE, DIRECTION_NORTH, DIRECTION_SPLIT_EAST_WEST, DIRECTION_NORTH));
 
-    pieces.set(PIECE_BLUE, new Swatch("pieces/swatch_blue.png", 0, 0, 255));
-    pieces.set(PIECE_RED, new Swatch("pieces/swatch_red.png", 255, 0, 0));
-    pieces.set(PIECE_GREEN, new Swatch("pieces/swatch_green.png", 0, 255, 0));
+    pieces.set(PIECE_BLUE, new Swatch("pieces/swatch_blue.png", new Color(0, 0, 255)));
+    pieces.set(PIECE_RED, new Swatch("pieces/swatch_red.png", new Color(255, 0, 0)));
+    pieces.set(PIECE_GREEN, new Swatch("pieces/swatch_green.png", new Color(0, 255, 0)));
+
+
+    directionMapping = {[DIRECTION_NORTH]: new Tile(0, -1), [DIRECTION_SOUTH]: new Tile(0, 1), [DIRECTION_EAST]: new Tile(1, 0), [DIRECTION_WEST]: new Tile(-1, 0)};
+    lasergrid.calculateAllPaths(); // has to be done here to make sure everything is made
 }
 
 /**
@@ -485,19 +624,6 @@ function windowToCanvas(x, y) {
     return { x: x - bbox.left * (canvas.width  / bbox.width),
         y: y - bbox.top  * (canvas.height / bbox.height)
     };
-}
-
-function tileToEdgeNumber(x, y) {
-    if (y === 0 && x > 0 && x < 6) {
-        return x;
-    } else if (x === 6 && y > 0 && y < 6) {
-        return 5 + y;
-    } else if (y === 6 && x > 0 && x < 6) {
-        return 16 - x;
-    } else if (x === 0 && y > 0 && y < 6) {
-        return 21 - y;
-    }
-    return null;
 }
 
 function getOppositeDirection() {
