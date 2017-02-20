@@ -19,14 +19,18 @@ const PIECE_GREEN = Symbol('forwardSlash');
 const END_BLOCKED = Symbol('blocked');
 const END_LOOP = Symbol('loop');
 
+const TILE_FULL = 50;
+const TILE_HALF = TILE_FULL / 2;
+
 class Piece {
     /**
      * Constructs a single piece with the given image src
      * @param {string} src
      */
-    constructor (src) {
+    constructor(src) {
         this.tile = new Tile(-1, -1);
-        this.img = new Image(); this.img.src = src;
+        this.img = new Image();
+        this.img.src = src;
     }
 
     /**
@@ -51,9 +55,12 @@ class Mirror extends Piece {
      * @param {Symbol} south
      * @param {Symbol} west
      */
-    constructor (src, north, east, south, west) {
+    constructor(src, north, east, south, west) {
         super(src);
-        this[DIRECTION_NORTH] = north; this[DIRECTION_SOUTH] = south; this[DIRECTION_EAST] = east; this[DIRECTION_WEST] = west;
+        this[DIRECTION_NORTH] = north;
+        this[DIRECTION_SOUTH] = south;
+        this[DIRECTION_EAST] = east;
+        this[DIRECTION_WEST] = west;
     }
 }
 
@@ -66,7 +73,7 @@ class Swatch extends Piece {
      * @param {string} src
      * @param {Color} color
      */
-    constructor (src, color) {
+    constructor(src, color) {
         super(src);
         this.color = color;
     }
@@ -83,7 +90,9 @@ class Color {
      * @param {number} b between 0 and 255
      */
     constructor(r = 0, g = 0, b = 0) {
-        this.r = r; this.g = g; this.b = b;
+        this.r = r;
+        this.g = g;
+        this.b = b;
     }
 
     /**
@@ -95,10 +104,26 @@ class Color {
         return new Color(Math.min(this.r + color.r, 255), Math.min(this.g + color.g, 255), Math.min(this.b + color.b, 255));
     }
 
+    /**
+     * copies this color
+     * @returns {Color}
+     */
+    copy() {
+        return new Color(this.r, this.g, this.b);
+    }
+
+    /**
+     * returns the rgb string to shove into a ctx.fillstyle or somesuch
+     * @returns {string}
+     */
     toRGBString() {
         return "rgb(" + this.r + "," + this.g + "," + this.b + ")";
     }
 
+    /**
+     * returns the english name of the color
+     * @returns {*}
+     */
     toName() {
         if (this.r === 0) {
             if (this.g === 0) {
@@ -132,24 +157,42 @@ class Laser {
      * @param {Symbol} dir
      * @param {Color} color
      */
-    constructor (tile, dir, color = new Color()) {
-        this.tile = tile; this.dir = dir;
+    constructor(tile, dir, color = new Color()) {
+        this.tile = tile;
+        this.dir = dir;
         this.color = color;
     }
+
+    /**
+     * creates a laser with the opposite direction
+     * @returns {Laser}
+     */
+    getOppositeLaser() {
+        return new Laser(this.tile.copy(), oppositeDirection[this.dir], this.color.copy());
+    }
+
+    /**
+     *
+     * @returns {Laser}
+     */
+    copy() {
+        return new Laser(this.tile.copy(), this.dir, this.color.copy());
+    }
 }
+
 
 /**
  * A class that represents a tile, holds tileX and tileY
  */
 class Tile {
     /**
-     *  Constructs a tile based on pixel location and the global TILESIZE
+     *  Constructs a tile based on pixel location and the global TILE_FULL
      * @param {number} x
      * @param {number} y
      * @returns {Tile}
      */
     static TileFromPixels(x, y) {
-        return new Tile(Math.floor(x / TILESIZE), Math.floor(y / TILESIZE));
+        return new Tile(Math.floor(x / TILE_FULL), Math.floor(y / TILE_FULL));
     }
 
     /**
@@ -158,7 +201,8 @@ class Tile {
      * @param {number} tileY
      */
     constructor(tileX = -1, tileY = -1) {
-        this.tileX = tileX; this.tileY = tileY;
+        this.tileX = tileX;
+        this.tileY = tileY;
     }
 
     /**
@@ -176,7 +220,7 @@ class Tile {
      * @returns {{x: number, y: number}}
      */
     toPixels() {
-        return {x: this.tileX * TILESIZE, y: this.tileY * TILESIZE};
+        return {x: this.tileX * TILE_FULL, y: this.tileY * TILE_FULL};
     }
 
     /**
@@ -245,9 +289,16 @@ class CanvasComponent {
      * @param {number} [offsetY = 0] pixel offset for the image
      */
     constructor(src, tile, widthInTiles, heightInTiles, offsetX = 0, offsetY = 0) {
-        this.img = new Image(); this.img.onload = () => {draw()}; this.img.src = src;
-        this.tile = tile; this.widthInTiles = widthInTiles; this.heightInTiles = heightInTiles;
-        this.offsetX = offsetX; this.offsetY = offsetY;
+        this.img = new Image();
+        this.img.onload = () => {
+            draw()
+        };
+        this.img.src = src;
+        this.tile = tile;
+        this.widthInTiles = widthInTiles;
+        this.heightInTiles = heightInTiles;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
     }
 
     /**
@@ -304,9 +355,9 @@ class Toolbar extends CanvasComponent {
 
         // draw the green highlight
         ctx.fillStyle = "green";
-        ctx .globalAlpha = 0.2;
+        ctx.globalAlpha = 0.2;
         let loc = new Tile(this.tile.add(new Tile(this.selectedPiece, 0)).tileX, this.tile.tileY).toPixels();
-        ctx.fillRect(loc.x, loc.y, TILESIZE, TILESIZE);
+        ctx.fillRect(loc.x, loc.y, TILE_FULL, TILE_FULL);
         ctx.globalAlpha = 1;
     }
 
@@ -355,7 +406,18 @@ class LaserGrid extends CanvasComponent {
             }
         }
 
+        this.selectedEdge = 1;
+
+        /**
+         *
+         * @type {Array.<Ending>}
+         */
         this.paths = [];
+        /**
+         *
+         * @type {Array.<Laser>}
+         */
+        this.drawPath = [];
     }
 
     /**
@@ -370,6 +432,20 @@ class LaserGrid extends CanvasComponent {
                 piece.drawAt(this.tile.add(piece.tile).add(new Tile(1, 1)));
             }
         }
+
+        for (let i = 0; i < this.drawPath.length; i++) {
+            ctx.beginPath();
+            let laser = this.drawPath[i];
+            ctx.strokeStyle = laser.color.toRGBString();
+            let loc = laser.tile.add(new Tile(1, 1)).toPixels();
+            loc.x += TILE_HALF;
+            loc.y += TILE_HALF;
+            ctx.moveTo(loc.x, loc.y);
+            let tilemap = directionMapping[laser.dir];
+            ctx.lineTo(loc.x + tilemap.tileX * TILE_HALF, loc.y + tilemap.tileY * TILE_HALF);
+            ctx.stroke();
+        }
+
     }
 
     /**
@@ -389,7 +465,14 @@ class LaserGrid extends CanvasComponent {
                     this.setPiece(toolbar.getSelectedPiece(), loc);
                 }
                 this.calculateAllPaths();
+                this.calculateDrawPath();
             }
+            let newEdge = LaserGrid.tileToEdgeNumber(relativeTile.add(new Tile(-1, -1)));
+            console.log(newEdge);
+            if (newEdge != 0) {
+                this.selectedEdge = newEdge;
+            }
+            this.calculateDrawPath();
         }
     }
 
@@ -472,6 +555,43 @@ class LaserGrid extends CanvasComponent {
         this.addEndingToPaths(edge, new Ending(END_LOOP, laser.color));
     }
 
+    /**
+     *
+     * @param {Laser} laser
+     */
+    calculateDrawPath(laser = LaserGrid.edgeNumberToLaser(this.selectedEdge)) {
+        for (let i = 0; i < 100; i++) {
+            laser.tile = laser.tile.nextTile(laser.dir);
+            if (!laser.tile.isValid(5, 5)) {
+                return;
+            }
+            let piece = this.getPiece(laser.tile);
+            this.drawPath.push(laser.copy());
+            if (piece) {
+                if (piece instanceof Mirror) {
+                    laser.dir = piece[laser.dir];
+                    switch (laser.dir) {
+                        case DIRECTION_SPLIT_NORTH_SOUTH:
+                            laser.dir = DIRECTION_NORTH;
+                            this.drawPath.push(laser.copy());
+                            this.calculateDrawPath(new Laser(laser.tile, DIRECTION_SOUTH, laser.color));
+                            break;
+                        case DIRECTION_SPLIT_EAST_WEST:
+                            laser.dir = DIRECTION_EAST;
+                            this.drawPath.push(laser.copy());
+                            this.calculateDrawPath(new Laser(laser.tile, DIRECTION_WEST, laser.color));
+                            break;
+                        case DIRECTION_NONE:
+                            return;
+                    }
+                } else if (piece instanceof Swatch) {
+                    laser.color = laser.color.add(piece.color);
+                }
+            } // if piece is not null
+            this.drawPath.push(laser.getOppositeLaser());
+        }
+    }
+
     logPaths() {
         for (let i = 1; i <= 20; i++) {
             // if (path.length > 1) {
@@ -479,7 +599,7 @@ class LaserGrid extends CanvasComponent {
             // }
             let path = this.paths[i];
             let ending = path[0];
-            console.log(i + " -> " + ending.end + " " + ending.color.toName());
+            //console.log(i + " -> " + ending.end + " " + ending.color.toName());
         }
     }
 
@@ -517,9 +637,10 @@ class LaserGrid extends CanvasComponent {
      * @returns {number}
      */
     static tileToEdgeNumber(tile) {
-        let x = tile.tileX; let y = tile.tileY;
+        let x = tile.tileX;
+        let y = tile.tileY;
         if (y === -1 && x > -1 && x < 5) {
-            return 1+ x;
+            return 1 + x;
         } else if (x === 5 && y > -1 && y < 5) {
             return 6 + y;
         } else if (y === 5 && x > -1 && x < 5) {
@@ -539,15 +660,14 @@ class Ending {
      * @param {Color} color
      */
     constructor(end, color) {
-        this.end = end; this.color = color;
+        this.end = end;
+        this.color = color;
     }
 }
 
 
 const canvas = document.getElementById("laser-game-canvas");
 const ctx = canvas.getContext("2d");
-
-const TILESIZE = 50;
 
 const toolbar = new Toolbar("toolbar.png", new Tile(1, 8), 8, 1);
 const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
@@ -565,6 +685,10 @@ const numToPiece = [PIECE_FORWARDSLASH, PIECE_BACKSLASH, PIECE_BLACKHOLE, PIECE_
  * @type {Object.<Symbol, Tile>}
  */
 let directionMapping;
+/**
+ * @type {Object.<Symbol, Symbol>}
+ */
+let oppositeDirection;
 
 /**
  * Inits the things that aren't constants
@@ -584,8 +708,21 @@ function init() {
     pieces.set(PIECE_GREEN, new Swatch("pieces/swatch_green.png", new Color(0, 255, 0)));
 
 
-    directionMapping = {[DIRECTION_NORTH]: new Tile(0, -1), [DIRECTION_SOUTH]: new Tile(0, 1), [DIRECTION_EAST]: new Tile(1, 0), [DIRECTION_WEST]: new Tile(-1, 0)};
+    directionMapping = {
+        [DIRECTION_NORTH]: new Tile(0, -1),
+        [DIRECTION_SOUTH]: new Tile(0, 1),
+        [DIRECTION_EAST]: new Tile(1, 0),
+        [DIRECTION_WEST]: new Tile(-1, 0)
+    };
+    oppositeDirection = {
+        [DIRECTION_NORTH]: DIRECTION_SOUTH,
+        [DIRECTION_EAST]: DIRECTION_WEST,
+        [DIRECTION_SOUTH]: DIRECTION_NORTH,
+        [DIRECTION_WEST]: DIRECTION_EAST
+    };
+
     lasergrid.calculateAllPaths(); // has to be done here to make sure everything is made
+    lasergrid.calculateDrawPath();
 }
 
 /**
@@ -621,19 +758,11 @@ function onClick(event) {
 function windowToCanvas(x, y) {
     let bbox = canvas.getBoundingClientRect();
 
-    return { x: x - bbox.left * (canvas.width  / bbox.width),
-        y: y - bbox.top  * (canvas.height / bbox.height)
+    return {
+        x: x - bbox.left * (canvas.width / bbox.width),
+        y: y - bbox.top * (canvas.height / bbox.height)
     };
 }
-
-function getOppositeDirection() {
-
-}
-
-// function rgb(r, g, b){
-//
-//     return "rgb("+r+","+g+","+b+")";
-// }
 
 
 init();
