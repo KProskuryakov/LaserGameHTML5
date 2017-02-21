@@ -30,6 +30,7 @@ class Piece {
     constructor(src) {
         this.tile = new Tile(-1, -1);
         this.img = new Image();
+        this.img.onload = () => {draw()};
         this.img.src = src;
     }
 
@@ -180,7 +181,6 @@ class Laser {
     }
 }
 
-
 /**
  * A class that represents a tile, holds tileX and tileY
  */
@@ -290,9 +290,7 @@ class CanvasComponent {
      */
     constructor(src, tile, widthInTiles, heightInTiles, offsetX = 0, offsetY = 0) {
         this.img = new Image();
-        this.img.onload = () => {
-            draw()
-        };
+        this.img.onload = () => {draw()};
         this.img.src = src;
         this.tile = tile;
         this.widthInTiles = widthInTiles;
@@ -359,6 +357,18 @@ class Toolbar extends CanvasComponent {
         let loc = new Tile(this.tile.add(new Tile(this.selectedPiece, 0)).tileX, this.tile.tileY).toPixels();
         ctx.fillRect(loc.x, loc.y, TILE_FULL, TILE_FULL);
         ctx.globalAlpha = 1;
+
+        // draw the red highlight
+        ctx.fillStyle = "red";
+        ctx.globalAlpha = 0.2;
+        for (let i = 0; i < numToPiece.length; i++) {
+            let piece = pieces.get(numToPiece[i]);
+            if (i != this.selectedPiece && piece.tile.isValid()) {
+                let loc = new Tile(this.tile.add(new Tile(i, 0)).tileX, this.tile.tileY).toPixels();
+                ctx.fillRect(loc.x, loc.y, TILE_FULL, TILE_FULL);
+            }
+        }
+        ctx.globalAlpha = 1.0;
     }
 
     /**
@@ -468,7 +478,6 @@ class LaserGrid extends CanvasComponent {
                 this.calculateDrawPathWrapper();
             }
             let newEdge = LaserGrid.tileToEdgeNumber(relativeTile.add(new Tile(-1, -1)));
-            console.log(newEdge);
             if (newEdge != 0) {
                 this.selectedEdge = newEdge;
             }
@@ -603,8 +612,17 @@ class LaserGrid extends CanvasComponent {
             //     console.log()
             // }
             let path = this.paths[i];
-            let ending = path[0];
-            //console.log(i + " -> " + ending.end + " " + ending.color.toName());
+            let line = i + " -> ";
+            if (path.length > 1) {
+                line += "{" + path[0].toString() + ", ";
+                for (let space = 1; i < path.length - 1; i++) {
+                    line += path[space].toString() + ", ";
+                }
+                line += path[path.length - 1].toString() + "}";
+            } else {
+                line += path[0].toString();
+            }
+            console.log(line);
         }
     }
 
@@ -668,6 +686,19 @@ class Ending {
         this.end = end;
         this.color = color;
     }
+    
+    toString() {
+        let string = "";
+        if (this.end == END_BLOCKED) {
+            string += "blocked";
+        } else if(this.end == END_LOOP) {
+            string += "loop";
+        } else {
+            string += this.end;
+        }
+        string += " " + this.color.toName();
+        return string;
+    }
 }
 
 
@@ -727,7 +758,7 @@ function init() {
     };
 
     lasergrid.calculateAllPaths(); // has to be done here to make sure everything is made
-    lasergrid.calculateDrawPath();
+    lasergrid.calculateDrawPathWrapper();
 }
 
 /**
