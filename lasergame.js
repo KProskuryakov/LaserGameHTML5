@@ -465,14 +465,14 @@ class LaserGrid extends CanvasComponent {
                     this.setPiece(toolbar.getSelectedPiece(), loc);
                 }
                 this.calculateAllPaths();
-                this.calculateDrawPath();
+                this.calculateDrawPathWrapper();
             }
             let newEdge = LaserGrid.tileToEdgeNumber(relativeTile.add(new Tile(-1, -1)));
             console.log(newEdge);
             if (newEdge != 0) {
                 this.selectedEdge = newEdge;
             }
-            this.calculateDrawPath();
+            this.calculateDrawPathWrapper();
         }
     }
 
@@ -555,30 +555,35 @@ class LaserGrid extends CanvasComponent {
         this.addEndingToPaths(edge, new Ending(END_LOOP, laser.color));
     }
 
+    calculateDrawPathWrapper() {
+        this.drawPath = [];
+        this.calculateDrawPath(LaserGrid.edgeNumberToLaser(this.selectedEdge));
+    }
+
     /**
      *
      * @param {Laser} laser
      */
-    calculateDrawPath(laser = LaserGrid.edgeNumberToLaser(this.selectedEdge)) {
+    calculateDrawPath(laser) {
         for (let i = 0; i < 100; i++) {
             laser.tile = laser.tile.nextTile(laser.dir);
             if (!laser.tile.isValid(5, 5)) {
                 return;
             }
             let piece = this.getPiece(laser.tile);
-            this.drawPath.push(laser.copy());
+            this.drawPath.push(laser.getOppositeLaser());
             if (piece) {
                 if (piece instanceof Mirror) {
                     laser.dir = piece[laser.dir];
                     switch (laser.dir) {
                         case DIRECTION_SPLIT_NORTH_SOUTH:
                             laser.dir = DIRECTION_NORTH;
-                            this.drawPath.push(laser.copy());
+                            this.drawPath.push(laser.getOppositeLaser());
                             this.calculateDrawPath(new Laser(laser.tile, DIRECTION_SOUTH, laser.color));
                             break;
                         case DIRECTION_SPLIT_EAST_WEST:
                             laser.dir = DIRECTION_EAST;
-                            this.drawPath.push(laser.copy());
+                            this.drawPath.push(laser.getOppositeLaser());
                             this.calculateDrawPath(new Laser(laser.tile, DIRECTION_WEST, laser.color));
                             break;
                         case DIRECTION_NONE:
@@ -588,7 +593,7 @@ class LaserGrid extends CanvasComponent {
                     laser.color = laser.color.add(piece.color);
                 }
             } // if piece is not null
-            this.drawPath.push(laser.getOppositeLaser());
+            this.drawPath.push(laser.copy());
         }
     }
 
