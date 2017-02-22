@@ -1,4 +1,12 @@
 "use strict";
+const canvas = document.getElementById("laser-game-canvas");
+const ctx = canvas.getContext("2d");
+
+const textarea = document.getElementById("game-text-area");
+const importlabel = document.getElementById("imported-section");
+const pathslabel = document.getElementById("paths-section");
+
+
 const DIRECTION_NORTH = Symbol('North');
 const DIRECTION_SOUTH = Symbol('South');
 const DIRECTION_EAST = Symbol('East');
@@ -113,6 +121,10 @@ class Color {
         return new Color(this.r, this.g, this.b);
     }
 
+    equals(otherColor) {
+        return this.r === otherColor.r && this.g === otherColor.g && this.b === otherColor.b;
+    }
+
     /**
      * returns the rgb string to shove into a ctx.fillstyle or somesuch
      * @returns {string}
@@ -148,6 +160,32 @@ class Color {
             return "yellow";
         }
         return "white";
+    }
+
+    /**
+     * Creates a color from the name of the color
+     * @param {string} name
+     * @returns {Color}
+     */
+    static colorFromName(name) {
+        switch(name) {
+            case "black":
+                return new Color(0, 0, 0);
+            case "blue":
+                return new Color(0, 0, 255);
+            case "green":
+                return new Color(0, 255, 0);
+            case "red":
+                return new Color(255, 0, 0);
+            case "yellow":
+                return new Color(255, 255, 0);
+            case "cyan":
+                return new Color(0, 255, 255);
+            case "magenta":
+                return new Color(255, 0, 255);
+            case "white":
+                return new Color(255, 255, 255);
+        }
     }
 }
 
@@ -420,7 +458,7 @@ class LaserGrid extends CanvasComponent {
 
         /**
          *
-         * @type {Array.<Ending>}
+         * @type {Array.<Array.<Ending>>}
          */
         this.paths = [];
         /**
@@ -428,6 +466,8 @@ class LaserGrid extends CanvasComponent {
          * @type {Array.<Laser>}
          */
         this.drawPath = [];
+
+        this.importedPathsList = [];
     }
 
     /**
@@ -455,7 +495,6 @@ class LaserGrid extends CanvasComponent {
             ctx.lineTo(loc.x + tilemap.tileX * TILE_HALF, loc.y + tilemap.tileY * TILE_HALF);
             ctx.stroke();
         }
-
     }
 
     /**
@@ -523,7 +562,10 @@ class LaserGrid extends CanvasComponent {
         for (let edge = 1; edge <= 20; edge++) {
             this.calculatePath(edge, LaserGrid.edgeNumberToLaser(edge));
         }
-        this.logPaths();
+        logPaths();
+        if (this.importedPathsList.length > 0) {
+            logImportPaths();
+        }
     }
 
     /**
@@ -564,6 +606,9 @@ class LaserGrid extends CanvasComponent {
         this.addEndingToPaths(edge, new Ending(END_LOOP, laser.color));
     }
 
+    /**
+     * Calculates the drawpath from the selected edge
+     */
     calculateDrawPathWrapper() {
         this.drawPath = [];
         this.calculateDrawPath(LaserGrid.edgeNumberToLaser(this.selectedEdge));
@@ -603,26 +648,6 @@ class LaserGrid extends CanvasComponent {
                 }
             } // if piece is not null
             this.drawPath.push(laser.copy());
-        }
-    }
-
-    logPaths() {
-        for (let i = 1; i <= 20; i++) {
-            // if (path.length > 1) {
-            //     console.log()
-            // }
-            let path = this.paths[i];
-            let line = i + " -> ";
-            if (path.length > 1) {
-                line += "{" + path[0].toString() + ", ";
-                for (let space = 1; i < path.length - 1; i++) {
-                    line += path[space].toString() + ", ";
-                }
-                line += path[path.length - 1].toString() + "}";
-            } else {
-                line += path[0].toString();
-            }
-            console.log(line);
         }
     }
 
@@ -686,7 +711,11 @@ class Ending {
         this.end = end;
         this.color = color;
     }
-    
+
+    /**
+     * Converts the ending to a string representation
+     * @returns {string}
+     */
     toString() {
         let string = "";
         if (this.end == END_BLOCKED) {
@@ -699,11 +728,33 @@ class Ending {
         string += " " + this.color.toName();
         return string;
     }
+
+    /**
+     *
+     * @param {Ending} otherEnding
+     * @returns {boolean}
+     */
+    equals(otherEnding) {
+        return this.end == otherEnding.end && this.color.equals(otherEnding.color);
+    }
+
+    /**
+     * creates an ending from the logstring
+     * @param {string} logString (5 black) or (blocked blue) or (loop white)
+     */
+    static endingFromLogString(logString) {
+        let end = 0;
+        if (logString.indexOf("blocked") != -1) {
+            end = END_BLOCKED;
+        } else if (logString.indexOf("loop") != -1) {
+            end = END_LOOP;
+        } else {
+            end = Number(logString.slice(0, logString.indexOf(" ")));
+        }
+        let colorString = logString.slice(logString.indexOf(" ") + 1);
+        return new Ending(end, Color.colorFromName(colorString));
+    }
 }
-
-
-const canvas = document.getElementById("laser-game-canvas");
-const ctx = canvas.getContext("2d");
 
 const toolbar = new Toolbar("toolbar.png", new Tile(1, 8), 8, 1);
 const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
@@ -785,6 +836,131 @@ function onClick(event) {
     draw();
 }
 
+function importButtonPress() {
+    let textareastuff = textarea.value.split("\n");
+    if (textareastuff.length != 20) {
+        alert("There need to be 20 lines!");
+        return;
+    }
+    let pathsList = [];
+    for (let i = 0; i < 20; i++) {
+        let path = textareastuff[i].slice(6);
+        if (path.charAt(0) == "{") {
+            let endingsList = path.split(", ");
+            endingsList[0] = endingsList[0].slice(1);
+            endingsList[endingsList.length - 1] = endingsList[endingsList.length - 1].slice(0, endingsList[endingsList.length - 1].length - 1);
+            pathsList[i+1] = [];
+            for (let j = 0; j < endingsList.length; j++) {
+                pathsList[i+1].push(Ending.endingFromLogString(endingsList[j]));
+            }
+        } else {
+            pathsList[i+1] = [Ending.endingFromLogString(path)];
+        }
+    }
+    console.log(pathsList);
+    lasergrid.importedPathsList = pathsList;
+    logImportPaths();
+    logPaths();
+}
+
+function logPaths() {
+    let element = pathslabel;
+    let paths = lasergrid.paths;
+    element.innerHTML = "";
+    for (let i = 1; i <= 20; i++) {
+        let path = paths[i];
+        let line = i + "";
+        if (i < 10) {
+            line += "  -> ";
+        } else {
+            line += " -> ";
+        }
+        if (path.length > 1) {
+            line += "{" + path[0].toString() + ", ";
+            for (let space = 1; i < path.length - 1; i++) {
+                line += path[space].toString() + ", ";
+            }
+            line += path[path.length - 1].toString() + "}";
+        } else {
+            line += path[0].toString();
+        }
+        if (lasergrid.importedPathsList.length > 0) {
+            let equality = true;
+            if (lasergrid.importedPathsList[i].length === paths[i].length) {
+                for (let ei = 0; ei < paths[i].length; ei++) {
+                    if(!paths[i][ei].equals(lasergrid.importedPathsList[i][ei])) {
+                        equality = false;
+                        break;
+                    }
+                }
+            } else {
+                equality = false;
+            }
+            if (equality) {
+                element.innerHTML += "<span style='color: green'>" + line + "</span>";
+            } else {
+                element.innerHTML += "<span style='color: red'>" + line + "</span>";
+            }
+
+        } else {
+            element.innerHTML += line;
+        }
+
+        if (i < 20) {
+            element.innerHTML += "\n";
+        }
+    }
+}
+
+function logImportPaths() {
+    let element = importlabel;
+    let paths = lasergrid.importedPathsList;
+    element.innerHTML = "";
+    for (let i = 1; i <= 20; i++) {
+        let path = paths[i];
+        let line = i + "";
+        if (i < 10) {
+            line += "  -> ";
+        } else {
+            line += " -> ";
+        }
+        if (path.length > 1) {
+            line += "{" + path[0].toString() + ", ";
+            for (let space = 1; i < path.length - 1; i++) {
+                line += path[space].toString() + ", ";
+            }
+            line += path[path.length - 1].toString() + "}";
+        } else {
+            line += path[0].toString();
+        }
+        if (lasergrid.paths.length > 0) {
+            let equality = true;
+            if (lasergrid.paths[i].length === paths[i].length) {
+                for (let ei = 0; ei < paths[i].length; ei++) {
+                    if(!paths[i][ei].equals(lasergrid.paths[i][ei])) {
+                        equality = false;
+                        break;
+                    }
+                }
+            } else {
+                equality = false;
+            }
+            if (equality) {
+                element.innerHTML += "<span style='color: green'>" + line + "</span>";
+            } else {
+                element.innerHTML += "<span style='color: red'>" + line + "</span>";
+            }
+
+        } else {
+            element.innerHTML += line;
+        }
+
+        if (i < 20) {
+            element.innerHTML += "\n";
+        }
+    }
+}
+
 /**
  * Converts the x, y pixel coordinates from window position to relative canvas position
  * @param {number} x clientX
@@ -799,6 +975,5 @@ function windowToCanvas(x, y) {
         y: y - bbox.top * (canvas.height / bbox.height)
     };
 }
-
 
 init();
