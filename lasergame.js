@@ -877,7 +877,8 @@ function logPaths() {
         }
         if (path.length > 1) {
             line += "{" + path[0].toString() + ", ";
-            for (let space = 1; i < path.length - 1; i++) {
+            console.log(path.length);
+            for (let space = 1; space < path.length - 1; space++) {
                 line += path[space].toString() + ", ";
             }
             line += path[path.length - 1].toString() + "}";
