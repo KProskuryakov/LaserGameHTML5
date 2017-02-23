@@ -2,9 +2,9 @@
 const canvas = document.getElementById("laser-game-canvas");
 const ctx = canvas.getContext("2d");
 
-const textarea = document.getElementById("game-text-area");
-const importlabel = document.getElementById("imported-section");
-const pathslabel = document.getElementById("paths-section");
+const textArea = document.getElementById("game-text-area");
+const importPre = document.getElementById("imported-pre");
+const pathsPre = document.getElementById("paths-pre");
 
 
 const DIRECTION_NORTH = Symbol('North');
@@ -837,7 +837,7 @@ function onClick(event) {
 }
 
 function importButtonPress() {
-    let textareastuff = textarea.value.split("\n");
+    let textareastuff = textArea.value.split("\n");
     if (textareastuff.length != 20) {
         alert("There need to be 20 lines!");
         return;
@@ -864,7 +864,7 @@ function importButtonPress() {
 }
 
 function logPaths() {
-    let element = pathslabel;
+    let element = pathsPre;
     let paths = lasergrid.paths;
     element.innerHTML = "";
     for (let i = 1; i <= 20; i++) {
@@ -913,7 +913,7 @@ function logPaths() {
 }
 
 function logImportPaths() {
-    let element = importlabel;
+    let element = importPre;
     let paths = lasergrid.importedPathsList;
     element.innerHTML = "";
     for (let i = 1; i <= 20; i++) {
