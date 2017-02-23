@@ -756,7 +756,7 @@ class Ending {
     }
 }
 
-const toolbar = new Toolbar("toolbar.png", new Tile(1, 8), 8, 1);
+const toolbar = new Toolbar("toolbar.png", new Tile(0, 7), 7, 0);
 const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
 
 /**

@@ -3,13 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <title>Laser Game</title>
+    <style>
+        .flex-container{
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            width: 1550px;
+            height: 800px;
+            background-color: lightblue;
+        }
+        .flex-pre{
+            width: 200px;
+            height: 500px;
+            margin:15px;
+            background-color: lightcyan;
+        }
+    </style>
 </head>
 <body>
-<canvas id="laser-game-canvas" width=500 height=450></canvas>
-<pre id="imported-section">This is where the imported stuff is supposed to be.</pre>
-<pre id="paths-section">This is where the paths are supposed to be.</pre>
-<textarea id="game-text-area" rows="20" cols="50" style="resize: none;">Paste an import thing here.</textarea>
-<button onclick="importButtonPress();">Import!</button>
+<div class="flex-container">
+    <canvas id="laser-game-canvas" width="402" height="402"></canvas>
+    <pre class="flex-pre" id="paths-section">This is where the paths are supposed to be.</pre>
+    <pre class="flex-pre" id="imported-section">Imported Stuff</pre>
+    <textarea id="game-text-area" rows="20" cols="50" style="resize: none;">Paste an import thing here.</textarea>
+    <button onclick="importButtonPress();">Import!</button>
+</div>
 
 <script src="lasergame.js"></script>
 </body>
