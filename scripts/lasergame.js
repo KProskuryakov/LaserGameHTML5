@@ -53,7 +53,7 @@ class Piece {
 }
 
 /**
- * @extends Piece
+ * Mirrors represent pieces on the board that can change a laser's direction or split it/nullify it.
  */
 class Mirror extends Piece {
     /**
@@ -74,7 +74,7 @@ class Mirror extends Piece {
 }
 
 /**
- * @extends Piece
+ * Swatches represent pieces on the board that can change a laser's color
  */
 class Swatch extends Piece {
     /**
@@ -189,6 +189,9 @@ class Color {
     }
 }
 
+/**
+ * A representation of the location/direction/color of the laser  in a specific tile
+ */
 class Laser {
     /**
      * Constructs a Laser
@@ -701,6 +704,9 @@ class LaserGrid extends CanvasComponent {
 
 }
 
+/**
+ * A data point for the paths list holding a color and an ending edge number
+ */
 class Ending {
     /**
      *
@@ -756,8 +762,8 @@ class Ending {
     }
 }
 
-const toolbar = new Toolbar("toolbar.png", new Tile(0, 7), 8, 1);
-const lasergrid = new LaserGrid("lasergrid.png", new Tile(0, 0), 7, 7);
+const toolbar = new Toolbar("static/toolbar.png", new Tile(0, 7), 8, 1);
+const lasergrid = new LaserGrid("static/lasergrid.png", new Tile(0, 0), 7, 7);
 
 /**
  * @type {Map.<Symbol, Piece>}
@@ -784,15 +790,15 @@ function init() {
     canvas.addEventListener("mousemove", onMouseMove, false);
     canvas.addEventListener("click", onClick, false);
 
-    pieces.set(PIECE_FORWARDSLASH, new Mirror("pieces/mirror_forwardslash.png", DIRECTION_EAST, DIRECTION_NORTH, DIRECTION_WEST, DIRECTION_SOUTH));
-    pieces.set(PIECE_BACKSLASH, new Mirror("pieces/mirror_backslash.png", DIRECTION_WEST, DIRECTION_SOUTH, DIRECTION_EAST, DIRECTION_NORTH));
-    pieces.set(PIECE_BLACKHOLE, new Mirror("pieces/mirror_blackhole.png", DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE));
-    pieces.set(PIECE_SIDESPLIT, new Mirror("pieces/mirror_sidesplit.png", DIRECTION_EAST, DIRECTION_NONE, DIRECTION_EAST, DIRECTION_SPLIT_NORTH_SOUTH));
-    pieces.set(PIECE_UPSPLIT, new Mirror("pieces/mirror_upsplit.png", DIRECTION_NONE, DIRECTION_NORTH, DIRECTION_SPLIT_EAST_WEST, DIRECTION_NORTH));
+    pieces.set(PIECE_FORWARDSLASH, new Mirror("static/pieces/mirror_forwardslash.png", DIRECTION_EAST, DIRECTION_NORTH, DIRECTION_WEST, DIRECTION_SOUTH));
+    pieces.set(PIECE_BACKSLASH, new Mirror("static/pieces/mirror_backslash.png", DIRECTION_WEST, DIRECTION_SOUTH, DIRECTION_EAST, DIRECTION_NORTH));
+    pieces.set(PIECE_BLACKHOLE, new Mirror("static/pieces/mirror_blackhole.png", DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE, DIRECTION_NONE));
+    pieces.set(PIECE_SIDESPLIT, new Mirror("static/pieces/mirror_sidesplit.png", DIRECTION_EAST, DIRECTION_NONE, DIRECTION_EAST, DIRECTION_SPLIT_NORTH_SOUTH));
+    pieces.set(PIECE_UPSPLIT, new Mirror("static/pieces/mirror_upsplit.png", DIRECTION_NONE, DIRECTION_NORTH, DIRECTION_SPLIT_EAST_WEST, DIRECTION_NORTH));
 
-    pieces.set(PIECE_BLUE, new Swatch("pieces/swatch_blue.png", new Color(0, 0, 255)));
-    pieces.set(PIECE_RED, new Swatch("pieces/swatch_red.png", new Color(255, 0, 0)));
-    pieces.set(PIECE_GREEN, new Swatch("pieces/swatch_green.png", new Color(0, 255, 0)));
+    pieces.set(PIECE_BLUE, new Swatch("static/pieces/swatch_blue.png", new Color(0, 0, 255)));
+    pieces.set(PIECE_RED, new Swatch("static/pieces/swatch_red.png", new Color(255, 0, 0)));
+    pieces.set(PIECE_GREEN, new Swatch("static/pieces/swatch_green.png", new Color(0, 255, 0)));
 
 
     directionMapping = {
